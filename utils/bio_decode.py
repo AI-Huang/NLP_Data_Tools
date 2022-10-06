@@ -49,16 +49,21 @@ def load_bio_dataset(bio_filepath) -> List[Tuple[str, str]]:
     with open(bio_filepath) as f:
         words, tags = [], []
         # Each line of the file corresponds to one word and tag
-        for line in f:
+        for i, line in enumerate(f):
             if line != '\n':
                 line = line.strip('\n')
                 word, tag = line.split('\t')
                 try:
-                    # In case that word == '0' and tag == '\t'
                     if len(word) > 0 and len(tag) > 0:
-                        word, tag = str(word), str(tag)
-                        words.append(word)
-                        tags.append(tag)
+                        pass
+                    # In case that word == '0' and tag == ''
+                    else:
+                        # print(i, line)
+                        # Correct the tag
+                        tag = 'O'
+                    words.append(word)
+                    tags.append(tag)
+
                 except Exception as e:
                     print('An exception was raised, skipping a word: {}'.format(e))
             else:
@@ -78,7 +83,7 @@ def save_bio_dataset(dataset, save_dir):
         save_dir: (string)
     """
     # Create directory if it doesn't exist
-    print('Saving in {}...'.format(save_dir))
+    print(f"Saving in \"{save_dir}\"...")
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
 
@@ -106,7 +111,6 @@ def bio_decode(words, tags):
     assert length >= 2
     assert len(words) == len(tags)
 
-    idx = 1
     entities = []
 
     # State machine transition cases:
@@ -116,23 +120,16 @@ def bio_decode(words, tags):
     # B -> O, I -> O, stop labeling, reset entity.
 
     entity, start_position, end_position = "", None, None
-    previous_word, previous_tag = words[idx], tags[idx]
+    previous_word, previous_tag = words[0], tags[0]
     previous_label = previous_tag[0]
+
+    idx = 1
     while idx < length:
-        current_word, current_tag = words[idx], tags[idx]
-        current_label = current_tag[0]
-
-        # Check if to stop previous labeling
-        if current_label == "O" or current_label == "B":
-            if entity != "":
-                entities.append(
-                    Entity(entity, previous_tag[2:], start_position, end_position))
-                entity, start_position, end_position = "", None, None
-
-        if current_label == "B":
+        # Process past labels
+        if previous_label == "B":
             start_position, end_position = idx, idx + 1
-            entity += current_word
-        elif current_label == "I":
+            entity += previous_word
+        elif previous_label == "I":
             # Uncomment to throw entities labeled starting with I-XXX
             # if start_position is None:
             #     idx += 1
@@ -140,9 +137,20 @@ def bio_decode(words, tags):
             # In case that labels start with I-XXX
             start_position = idx if start_position is None else start_position
             end_position = end_position+1 if end_position is not None else idx+1
-            entity += current_word
-        elif current_label == "O":
+            entity += previous_word
+        elif previous_label == "O":
             pass
+
+        # Process current label
+        current_word, current_tag = words[idx], tags[idx]
+        current_label = current_tag[0]
+
+        # Check whether to stop previous labeling
+        if current_label == "O" or current_label == "B":
+            if entity != "":
+                entities.append(
+                    Entity(entity, previous_tag[2:], start_position, end_position))
+                entity, start_position, end_position = "", None, None
 
         previous_word, previous_tag = words[idx], tags[idx]
         previous_label = previous_tag[0]
@@ -186,8 +194,8 @@ def main():
     # save_bio_dataset(val_dataset, 'data/msra/val')
     # save_bio_dataset(test_dataset, 'data/msra/test')
 
-    save_bio_dataset(dataset_train_val, 'data/msra/train_val')
-    save_bio_dataset(dataset_test, 'data/msra/test')
+    save_bio_dataset(dataset_train_val, 'data/msra_sentences/train_val')
+    save_bio_dataset(dataset_test, 'data/msra_sentences/test')
 
 
 if __name__ == '__main__':
