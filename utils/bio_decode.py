@@ -78,7 +78,7 @@ def load_bio_dataset(bio_filepath) -> List[Tuple[str, str]]:
 def save_bio_dataset(dataset, save_dir):
     """Write sentences.txt and tags.txt files in save_dir from BIO dataset.
     Args:
-        dataset: List[Tuple[str, str]], a BIO dataset, e.g., 
+        dataset: List[Tuple[str, str]], a BIO dataset, e.g.,
             ([(["a", "cat"], ["O", "O"]), ...]).
         save_dir: (string)
     """
@@ -159,17 +159,70 @@ def bio_decode(words, tags):
     return entities
 
 
+def get_sent_num_tags(words, tags, tag_type):
+    """
+    Inputs:
+        words:
+        tags:
+        tag_type: e.g., "LOC".
+    """
+    num_tags_gt = 0
+    for tag in tags:
+        if tag.startswith('B'):
+            if tag[2:] == tag_type:
+                num_tags_gt += 1
+
+    num_tags = 0
+    entities = bio_decode(words, tags)
+    for entity in entities:
+        if entity.tag == tag_type:
+            num_tags += 1
+
+    return num_tags_gt, num_tags
+
+
+def bio_decode_test(dataset_splits):
+    """
+    Inputs:
+        dataset_splits: 
+    """
+    tag_nums = {
+        "train": {"LOC": 36860, "ORG": 20584, "PER": 17615},
+        "test": {"LOC": 2886, "ORG": 1331, "PER": 1973}
+    }
+    print('Start testing BIO decoding...')
+
+    for phase in ["train", "test"]:
+
+        for test_tag_type in tag_nums[phase].keys():
+            all_num_tags_gt = 0
+            for (words, tags) in dataset_splits[phase]:
+                num_tags_gt, num_tags = get_sent_num_tags(
+                    words, tags, tag_type=test_tag_type)
+                # Validate each sentence's number of tags
+                valid = True if num_tags == num_tags_gt else False
+                if not valid:
+                    raise ValueError("num_tags and num_tags_gt are NOT equal.")
+                all_num_tags_gt += num_tags_gt
+
+            # Validate the number of `test_tag_type` among all the sentences
+            if all_num_tags_gt != tag_nums[phase][test_tag_type]:
+                raise ValueError(
+                    f"all_num_tags_gt ({all_num_tags_gt}) NOT correct, true number: {tag_nums[phase][test_tag_type]}.")
+
+    print('Test done.')
+
+
 def main():
     msra_bio_dir = "data/msra_bio"
     msra_mrc_dir = "data/msra_mrc"
     tag2query_file = "ner2mrc/queries/zh_msra.json"
     os.makedirs(msra_mrc_dir, exist_ok=True)
 
-    # Check that the dataset exist, two balnk lines at the end of the file
+    # Check that the dataset exist, two blank lines at the end of the file
     path_train_val = os.path.join(msra_bio_dir, "train.tsv")
     path_test = os.path.join(msra_bio_dir, "test.tsv")
-    msg = '{} or {} file not found. Make sure you have downloaded the right dataset'.format(
-        path_train_val, path_test)
+    msg = f"{path_train_val} or {path_test} file not found. Make sure you have downloaded the right dataset"
     assert os.path.isfile(path_train_val) and os.path.isfile(path_test), msg
 
     # Load the dataset into memory
@@ -178,10 +231,13 @@ def main():
     dataset_test = load_bio_dataset(path_test)
     print('- done.')
 
+    dataset_splits = {"train": dataset_train_val, "test": dataset_test}
+    bio_decode_test(dataset_splits)
+
     # # Make a list that decides the order in which we go over the data
     # order = list(range(len(dataset_train_val)))
-    # # random.seed(2019)
-    # # random.shuffle(order)
+    # random.seed(2019)
+    # random.shuffle(order)
 
     # # Split the dataset into train, val(split with shuffle) and test
     # train_dataset = [dataset_train_val[idx]
