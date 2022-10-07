@@ -41,7 +41,8 @@ def to_doccano():
         print(f'Writing dataset_split {phase} into file: {new_filepath}...')
         with open(new_filepath, 'w', encoding="utf-8") as output_file:
             for (words, tags) in dataset_splits[phase]:
-                text = ' '.join(words)
+                # text = ' '.join(words)
+                text = ''.join(words)
                 entities = bio_decode(words, tags)
                 new_entities = []
                 for entity in entities:
