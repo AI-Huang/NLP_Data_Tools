@@ -46,7 +46,7 @@ def load_bio_sentences(bio_filepath) -> List[Tuple[str, str]]:
         ).
     """
     dataset = []
-    with open(bio_filepath) as f:
+    with open(bio_filepath, encoding="utf-8") as f:
         words, tags = [], []
         # Each line of the file corresponds to one word and tag
         for i, line in enumerate(f):

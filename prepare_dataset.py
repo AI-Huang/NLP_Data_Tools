@@ -6,6 +6,7 @@
 
 import os
 import json
+from pathlib import Path
 from utils.bio_decode import bio_decode, load_bio_sentences, save_bio_dataset
 
 
@@ -31,10 +32,10 @@ def load_bio_dataset(bio_dir, dataset_name="MSRA dataset"):
 
 def to_doccano_format():
 
-    msra_bio_dir = "data/msra_bio"
+    msra_bio_dir = Path("data/msra_bio")
     dataset_splits = load_bio_dataset(msra_bio_dir)
 
-    msra_doccano_dir = "data/msra_doccano"
+    msra_doccano_dir = Path("data/msra_doccano")
     global_item_id = 0
     global_entity_id = 0
     for phase in ["train", "test"]:
@@ -54,8 +55,8 @@ def to_doccano_format():
                         "entity": entity.entity,
                         "id": global_entity_id,
                         "label": entity.tag,
-                        "start_offset": entity.begin,
-                        "end_offset": entity.end
+                        "start_offset": entity.begin - 1,
+                        "end_offset": entity.end - 1
                     })
 
                 item = {"id": item_id, "text": text,
