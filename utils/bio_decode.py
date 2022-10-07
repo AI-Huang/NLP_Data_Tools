@@ -28,7 +28,7 @@ class Entity(object):
         return str({key: value for key, value in self.__dict__.items()})
 
 
-def load_bio_dataset(bio_filepath) -> List[Tuple[str, str]]:
+def load_bio_sentences(bio_filepath) -> List[Tuple[str, str]]:
     """Load BIO dataset into memory from a text file.
     Inputs:
         bio_filepath: a data file with lines:
@@ -193,7 +193,7 @@ def bio_decode_test(dataset_splits):
     print('Start testing BIO decoding...')
 
     for phase in ["train", "test"]:
-
+        print(f"Testing phase: {phase}.")
         for test_tag_type in tag_nums[phase].keys():
             all_num_tags_gt = 0
             for (words, tags) in dataset_splits[phase]:
@@ -227,8 +227,8 @@ def main():
 
     # Load the dataset into memory
     print('Loading MSRA dataset into memory...')
-    dataset_train_val = load_bio_dataset(path_train_val)
-    dataset_test = load_bio_dataset(path_test)
+    dataset_train_val = load_bio_sentences(path_train_val)
+    dataset_test = load_bio_sentences(path_test)
     print('- done.')
 
     dataset_splits = {"train": dataset_train_val, "test": dataset_test}
