@@ -1,0 +1,7 @@
+{
+  "files": {
+    "train": "train.tsv",
+    "test": "test.tsv"
+  },
+  "delimiter": "\t"
+}

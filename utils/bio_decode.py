@@ -30,7 +30,7 @@ class Entity(object):
         return str({key: value for key, value in self.__dict__.items()})
 
 
-def load_bio_sentences(bio_filepath) -> List[Tuple[str, str]]:
+def load_bio_sentences(bio_filepath, delimiter='\t') -> List[Tuple[str, str]]:
     """Load BIO dataset into memory from a text file.
     Inputs:
         bio_filepath: a data file with lines:
@@ -54,7 +54,7 @@ def load_bio_sentences(bio_filepath) -> List[Tuple[str, str]]:
         for i, line in enumerate(f):
             if line != '\n':
                 line = line.strip('\n')
-                word, tag = line.split('\t')
+                word, tag = line.split(delimiter)
                 try:
                     if len(word) > 0 and len(tag) > 0:
                         pass
@@ -121,17 +121,18 @@ def bio_decode(words, tags):
     # B -> I, I -> I, keep labeling,
     # B -> O, I -> O, stop labeling, reset entity.
 
-    entity, start_position, end_position = "", None, None
-    previous_word, previous_tag = words[0], tags[0]
-    previous_label = previous_tag[0]
+    entity, start_position, end_position = '', None, None
 
-    idx = 1
+    idx = 0
     while idx < length:
+        current_word, current_tag = words[idx], tags[idx]
+        current_bio = current_tag[0]
+
         # Process past labels
-        if previous_label == "B":
+        if current_bio == 'B':
             start_position, end_position = idx, idx + 1
-            entity += previous_word
-        elif previous_label == "I":
+            entity += current_word
+        elif current_bio == 'I':
             # Uncomment to throw entities labeled starting with I-XXX
             # if start_position is None:
             #     idx += 1
@@ -139,23 +140,27 @@ def bio_decode(words, tags):
             # In case that labels start with I-XXX
             start_position = idx if start_position is None else start_position
             end_position = end_position+1 if end_position is not None else idx+1
-            entity += previous_word
-        elif previous_label == "O":
+            entity += current_word
+        elif current_bio == 'O':
             pass
 
         # Process current label
-        current_word, current_tag = words[idx], tags[idx]
-        current_label = current_tag[0]
-
-        # Check whether to stop previous labeling
-        if current_label == "O" or current_label == "B":
+        if idx + 1 == length:
+            # Check whether there is an entity in the tail
             if entity != "":
                 entities.append(
-                    Entity(entity, previous_tag[2:], start_position, end_position))
+                    Entity(entity, current_tag[2:], start_position, end_position))
                 entity, start_position, end_position = "", None, None
+            break
+        else:
+            # Check whether to stop previous labeling
+            next_bio = tags[idx+1][0]
+            if next_bio == 'O' or next_bio == 'B':
+                if entity != "":
+                    entities.append(
+                        Entity(entity, current_tag[2:], start_position, end_position))
+                    entity, start_position, end_position = "", None, None
 
-        previous_word, previous_tag = words[idx], tags[idx]
-        previous_label = previous_tag[0]
         idx += 1
 
     return entities
@@ -185,10 +190,12 @@ def get_sent_num_tags(words, tags, tag_type):
 
 def bio_decode_test(dataset_splits, tag_nums):
     """
+    Check the number of tags of all types after decoding the original dataset of BIO format, for all dataset splits.
+
     Inputs:
         dataset_splits: 
-        tag_nums: dictionary, e.g., for MSRA dataset,
-
+        tag_nums: dictionary, stores the groundtruth number of all tags,
+        e.g., for MSRA dataset,
         tag_nums = {
             "train": {"LOC": 36860, "ORG": 20584, "PER": 17615},
             "test": {"LOC": 2886, "ORG": 1331, "PER": 1973}
@@ -201,13 +208,14 @@ def bio_decode_test(dataset_splits, tag_nums):
         print(f"Testing phase: {phase}.")
         for test_tag_type in tag_nums[phase].keys():
             all_num_tags_gt = 0
-            for (words, tags) in dataset_splits[phase]:
+            for idx, (words, tags) in enumerate(dataset_splits[phase]):
                 num_tags_gt, num_tags = get_sent_num_tags(
                     words, tags, tag_type=test_tag_type)
                 # Validate each sentence's number of tags
                 valid = True if num_tags == num_tags_gt else False
                 if not valid:
-                    raise ValueError("num_tags and num_tags_gt are NOT equal.")
+                    raise ValueError(
+                        f"num_tags ({num_tags}) and num_tags_gt ({num_tags_gt}) are NOT equal. \nCurrent phase: {phase}, idx: {idx}, test_tag_type: {test_tag_type}. \nCurrent words: {words}. \nCurrent tags: {tags}.")
                 all_num_tags_gt += num_tags_gt
 
             # Validate the number of `test_tag_type` among all the sentences
@@ -219,10 +227,12 @@ def bio_decode_test(dataset_splits, tag_nums):
 
 
 def main():
-    dataset_name = "MSRA"  # "MSRA", "People's Daily"
+    dataset_name = "People's Daily"  # "MSRA", "People's Daily"
+
     bio_dir = Path(f"data/{dataset_name}/BIO")
-    dataset_files = json.load(
-        open(os.path.join(bio_dir, "dataset_files.json")))
+    dataset_config = json.load(open(os.path.join(bio_dir, "dataset.json")))
+    dataset_files = dataset_config["files"]
+    delimiter = dataset_config["delimiter"]
 
     phases = dataset_files.keys()  # "train", "test"
     # Check that the dataset exist, two blank lines at the end of the file
@@ -235,9 +245,11 @@ def main():
     print(f'Loading {dataset_name} dataset into memory...')
     dataset_splits = {}
     for phase in phases:
-        dataset_splits[phase] = load_bio_sentences(dataset_files[phase])
+        dataset_splits[phase] = load_bio_sentences(
+            dataset_files[phase], delimiter)
     print('- done.')
 
+    # BIO decode
     tag_nums = json.load(
         open(os.path.join(bio_dir, "tag_nums.json")))
     bio_decode_test(dataset_splits, tag_nums)
