@@ -1,0 +1,5 @@
+{
+  "train": "train.tsv",
+  "dev": "",
+  "test": "test.tsv"
+}
