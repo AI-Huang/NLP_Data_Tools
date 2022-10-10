@@ -8,6 +8,7 @@
 # Refer to: https://github.com/ShannonAI/mrc-for-flat-nested-ner/blob/master/utils/bmes_decode.py
 
 import os
+from pathlib import Path
 from typing import Tuple, List
 
 
@@ -250,8 +251,8 @@ def main():
     # save_bio_dataset(val_dataset, 'data/msra/val')
     # save_bio_dataset(test_dataset, 'data/msra/test')
 
-    save_bio_dataset(dataset_train_val, 'data/msra_sentences/train_val')
-    save_bio_dataset(dataset_test, 'data/msra_sentences/test')
+    save_bio_dataset(dataset_train_val, Path("data/MSRA/sentences/train_val"))
+    save_bio_dataset(dataset_test, Path("data/MSRA/sentences/test"))
 
 
 if __name__ == '__main__':

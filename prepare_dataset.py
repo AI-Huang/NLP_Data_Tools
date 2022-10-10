@@ -32,10 +32,10 @@ def load_bio_dataset(bio_dir, dataset_name="MSRA dataset"):
 
 def to_doccano_format():
 
-    msra_bio_dir = Path("data/msra_bio")
+    msra_bio_dir = Path("data/MSRA/BIO")
     dataset_splits = load_bio_dataset(msra_bio_dir)
 
-    msra_doccano_dir = Path("data/msra_doccano")
+    msra_doccano_dir = Path("data/MSRA/doccano")
     global_item_id = 0
     global_entity_id = 0
     for phase in ["train", "test"]:

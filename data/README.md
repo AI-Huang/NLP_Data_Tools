@@ -2,12 +2,12 @@
 
 ## Data Sources
 
-Download **original** MSRA data from: https://github.com/lemonhu/NER-BERT-pytorch/tree/master/data/msra. Then:
+Download **original** MSRA data from: https://github.com/OYE93/Chinese-NLP-Corpus/tree/master/NER/MSRA, then:
 
 ```bash
-mkdir msra_bio
-mv msra_train_bio ./msra_bio/train.tsv
-mv msra_test_bio ./msra_bio/test.tsv
+mkdir -p ./data/MSRA/BIO
+mv msra_train_bio ./data/MSRA/BIO/train.tsv
+mv msra_test_bio ./data/MSRA/BIO/test.tsv
 ```
 
 ## References
