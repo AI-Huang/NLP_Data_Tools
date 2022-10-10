@@ -8,6 +8,7 @@
 # Refer to: https://github.com/ShannonAI/mrc-for-flat-nested-ner/blob/master/utils/bmes_decode.py
 
 import os
+import json
 from pathlib import Path
 from typing import Tuple, List
 
@@ -182,15 +183,18 @@ def get_sent_num_tags(words, tags, tag_type):
     return num_tags_gt, num_tags
 
 
-def bio_decode_test(dataset_splits):
+def bio_decode_test(dataset_splits, tag_nums):
     """
     Inputs:
         dataset_splits: 
+        tag_nums: dictionary, e.g., for MSRA dataset,
+
+        tag_nums = {
+            "train": {"LOC": 36860, "ORG": 20584, "PER": 17615},
+            "test": {"LOC": 2886, "ORG": 1331, "PER": 1973}
+        }
     """
-    tag_nums = {
-        "train": {"LOC": 36860, "ORG": 20584, "PER": 17615},
-        "test": {"LOC": 2886, "ORG": 1331, "PER": 1973}
-    }
+
     print('Start testing BIO decoding...')
 
     for phase in ["train", "test"]:
@@ -215,25 +219,28 @@ def bio_decode_test(dataset_splits):
 
 
 def main():
-    msra_bio_dir = "data/msra_bio"
-    msra_mrc_dir = "data/msra_mrc"
-    tag2query_file = "ner2mrc/queries/zh_msra.json"
-    os.makedirs(msra_mrc_dir, exist_ok=True)
+    dataset_name = "MSRA"  # "MSRA", "People's Daily"
+    bio_dir = Path(f"data/{dataset_name}/BIO")
+    dataset_files = json.load(
+        open(os.path.join(bio_dir, "dataset_files.json")))
 
+    phases = dataset_files.keys()  # "train", "test"
     # Check that the dataset exist, two blank lines at the end of the file
-    path_train_val = os.path.join(msra_bio_dir, "train.tsv")
-    path_test = os.path.join(msra_bio_dir, "test.tsv")
-    msg = f"{path_train_val} or {path_test} file not found. Make sure you have downloaded the right dataset"
-    assert os.path.isfile(path_train_val) and os.path.isfile(path_test), msg
+    for phase in phases:
+        dataset_files[phase] = os.path.join(bio_dir, dataset_files[phase])
+        msg = f"{dataset_files[phase]} file not found. Make sure you have downloaded the right dataset"
+        assert os.path.isfile(dataset_files[phase]), msg
 
     # Load the dataset into memory
-    print('Loading MSRA dataset into memory...')
-    dataset_train_val = load_bio_sentences(path_train_val)
-    dataset_test = load_bio_sentences(path_test)
+    print(f'Loading {dataset_name} dataset into memory...')
+    dataset_splits = {}
+    for phase in phases:
+        dataset_splits[phase] = load_bio_sentences(dataset_files[phase])
     print('- done.')
 
-    dataset_splits = {"train": dataset_train_val, "test": dataset_test}
-    bio_decode_test(dataset_splits)
+    tag_nums = json.load(
+        open(os.path.join(bio_dir, "tag_nums.json")))
+    bio_decode_test(dataset_splits, tag_nums)
 
     # # Make a list that decides the order in which we go over the data
     # order = list(range(len(dataset_train_val)))
@@ -251,8 +258,9 @@ def main():
     # save_bio_dataset(val_dataset, 'data/msra/val')
     # save_bio_dataset(test_dataset, 'data/msra/test')
 
-    save_bio_dataset(dataset_train_val, Path("data/MSRA/sentences/train_val"))
-    save_bio_dataset(dataset_test, Path("data/MSRA/sentences/test"))
+    sent_dir = Path(f"data/{dataset_name}/sentences")
+    for phase in phases:
+        save_bio_dataset(dataset_splits[phase], os.path.join(sent_dir, phase))
 
 
 if __name__ == '__main__':
